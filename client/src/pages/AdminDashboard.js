@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Tab, Nav, Table, Button, Form, Alert, Modal, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Tab, Nav, Table, Button, Form, Alert, Modal, Badge, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -12,6 +12,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [generatingDescription, setGeneratingDescription] = useState(false);
   
   // For product add/edit
   const [showProductModal, setShowProductModal] = useState(false);
@@ -28,6 +29,22 @@ const AdminDashboard = () => {
     featured: false,
     image_url: ''
   });
+  
+  useEffect(() => {
+    // Check authentication on load
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found. Please log in again.');
+        return;
+      }
+      
+      // Log the token for debugging (first 20 chars)
+      console.log('Current token:', token.substring(0, 20) + '...');
+    };
+    
+    checkAuth();
+  }, []);
   
   useEffect(() => {
     // Check if user is logged in as admin
@@ -153,6 +170,57 @@ const AdminDashboard = () => {
     }
   };
   
+  const generateAIDescription = async () => {
+    if (!productForm.name) return;
+    
+    try {
+      setGeneratingDescription(true);
+      setError('');
+      
+      const token = localStorage.getItem('token');
+      console.log('Using token for AI:', token ? 'Token exists' : 'No token');
+      
+      const response = await axios.post(
+        'http://localhost:5000/api/ai/generate-description',
+        { productName: productForm.name },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('AI Response:', response.data);
+      
+      if (response.data && response.data.description) {
+        setProductForm({
+          ...productForm,
+          description: response.data.description
+        });
+        setSuccess('AI description generated successfully');
+      } else {
+        setError('No description returned from AI service');
+      }
+    } catch (err) {
+      console.error('AI Description Error:', err);
+      let errorMsg = 'Failed to generate AI description';
+      
+      if (err.response) {
+        errorMsg += ': ' + (err.response.data?.message || err.response.statusText);
+        console.error('Error response:', err.response.data);
+      } else if (err.request) {
+        errorMsg += ': No response received from server';
+      } else {
+        errorMsg += ': ' + err.message;
+      }
+      
+      setError(errorMsg);
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+  
   const handleProductFormChange = (e) => {
     const { name, value, type, checked } = e.target;
     setProductForm({
@@ -199,20 +267,38 @@ const AdminDashboard = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setError('Authentication token missing. Please log in again.');
+        return;
+      }
+      
+      console.log('Submitting product with token:', token.substring(0, 20) + '...');
+      
       const config = {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`
         }
       };
       
+      // Format the form data
+      const formattedData = {
+        ...productForm,
+        price: parseFloat(productForm.price),
+        sale_price: productForm.sale_price ? parseFloat(productForm.sale_price) : null,
+        stock_quantity: parseInt(productForm.stock_quantity),
+        category_id: parseInt(productForm.category_id) || null,
+        featured: Boolean(productForm.featured)
+      };
+      
+      console.log('Submitting data:', formattedData);
+      
       if (editingProduct) {
-        // Update existing product
-        await axios.put(`http://localhost:5000/api/products/${editingProduct.id}`, productForm, config);
+        await axios.put(`http://localhost:5000/api/products/${editingProduct.id}`, formattedData, config);
         setSuccess('Product updated successfully');
       } else {
-        // Add new product
-        await axios.post('http://localhost:5000/api/products', productForm, config);
+        await axios.post('http://localhost:5000/api/products', formattedData, config);
         setSuccess('Product added successfully');
       }
       
@@ -222,7 +308,8 @@ const AdminDashboard = () => {
       
       setShowProductModal(false);
     } catch (err) {
-      setError('Failed to save product');
+      console.error('Save product error:', err.response || err);
+      setError('Failed to save product: ' + (err.response?.data?.message || err.message));
     }
   };
 
@@ -424,6 +511,26 @@ const AdminDashboard = () => {
             
             <Form.Group className="mb-3">
               <Form.Label>Description</Form.Label>
+              <div className="mb-2">
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  onClick={generateAIDescription}
+                  disabled={!productForm.name || generatingDescription}
+                  className="me-2"
+                >
+                  {generatingDescription ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" className="me-1" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-robot me-1"></i> Generate AI Description
+                    </>
+                  )}
+                </Button>
+              </div>
               <Form.Control
                 as="textarea"
                 rows={3}
