@@ -1,0 +1,89 @@
+import React, { useState } from 'react';
+import { Container, Form, Button, Row, Col } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+
+const RegisterPage = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [message, setMessage] = useState(null);
+
+  const submitHandler = (e) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setMessage('Passwords do not match');
+    } else {
+      // Register logic will be implemented later
+      console.log('Register', { name, email, password });
+    }
+  };
+
+  return (
+    <Container>
+      <Row className="justify-content-md-center my-5">
+        <Col xs={12} md={6}>
+          <h1>Sign Up</h1>
+          {message && <div className="alert alert-danger">{message}</div>}
+          <Form onSubmit={submitHandler}>
+            <Form.Group className="mb-3" controlId="name">
+              <Form.Label>Name</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Enter name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="email">
+              <Form.Label>Email Address</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="Enter email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="password">
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="confirmPassword">
+              <Form.Label>Confirm Password</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Confirm password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+
+            <Button variant="primary" type="submit" className="w-100 mt-3">
+              Register
+            </Button>
+          </Form>
+
+          <Row className="py-3">
+            <Col>
+              Already have an account? <Link to="/login">Sign In</Link>
+            </Col>
+          </Row>
+        </Col>
+      </Row>
+    </Container>
+  );
+};
+
+export default RegisterPage;
