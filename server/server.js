@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path'); // Add this line
 require('dotenv').config();
 
 const app = express();
@@ -32,6 +33,12 @@ app.use('/api/categories', require('./src/routes/categories'));
 app.use('/api/used-items', require('./src/routes/used-items'));
 app.use('/api/notifications', require('./src/routes/notifications')); // Added notifications route
 app.use('/api/ai', require('./src/routes/ai'));
+app.use('/api/uploads', require('./src/routes/uploads')); // Added uploads route
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+// Uncommented routes
 // app.use('/api/orders', require('./src/routes/orders'));
 // app.use('/api/cart', require('./src/routes/cart'));
 // app.use('/api/reviews', require('./src/routes/reviews'));

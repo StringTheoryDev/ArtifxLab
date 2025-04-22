@@ -48,30 +48,46 @@ const AddListingPage = () => {
 
   const uploadImage = async () => {
     if (!selectedFile) return null;
-    
+
     setUploadLoading(true);
-    
+
     // Create a FormData object to send the file
     const formData = new FormData();
     formData.append('image', selectedFile);
-    
+
     try {
-      // In a real implementation, you would send the file to a server endpoint
-      // For demo purposes, we'll simulate an upload and return a fake URL
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Generate a fake URL that would normally come from the server response
-      const fakeUploadedUrl = URL.createObjectURL(selectedFile);
-      
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        setError('You must be logged in to upload images');
+        setUploadLoading(false);
+        return null;
+      }
+
+      // Send the file to the server
+      const response = await axios.post(
+        'http://localhost:5000/api/uploads',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      // Get the URL from the server response
+      const imageUrl = `http://localhost:5000${response.data.url}`;
+
       setUploadLoading(false);
-      setImage(fakeUploadedUrl);
-      
-      return fakeUploadedUrl;
+      setImage(imageUrl);
+
+      return imageUrl;
     } catch (err) {
       setUploadLoading(false);
       setError('Failed to upload image. Please try again.');
+      console.error('Upload error:', err);
       return null;
     }
   };

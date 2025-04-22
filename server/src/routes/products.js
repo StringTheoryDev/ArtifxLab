@@ -72,7 +72,8 @@ router.post('/', adminAuth, async (req, res) => {
       sku,
       featured,
       attributes,
-      images
+      images,
+      image_url  // Add this to support direct URL
     } = req.body;
     
     // Insert product
@@ -83,26 +84,19 @@ router.post('/', adminAuth, async (req, res) => {
     
     const productId = result.insertId;
     
-    // Insert attributes if provided
-    if (attributes && attributes.length > 0) {
-      const attributeValues = attributes.map(attr => [
-        productId,
-        attr.name,
-        attr.value
-      ]);
-      
+    // Process image - handle both formats
+    if (image_url) {
+      // If direct image_url is provided, use it
       await pool.query(
-        'INSERT INTO product_attributes (product_id, attribute_name, attribute_value) VALUES ?',
-        [attributeValues]
+        'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)',
+        [productId, image_url, 1]
       );
-    }
-    
-    // Insert images if provided
-    if (images && images.length > 0) {
+    } else if (images && images.length > 0) {
+      // Legacy format with images array
       const imageValues = images.map((img, index) => [
         productId,
         img.url,
-        index === 0 // First image is primary
+        index === 0 || img.is_primary
       ]);
       
       await pool.query(
@@ -133,7 +127,8 @@ router.put('/:id', adminAuth, async (req, res) => {
       stock_quantity, 
       brand,
       sku,
-      featured
+      featured,
+      image_url  // Add this to support direct URL
     } = req.body;
     
     // Update product
@@ -142,18 +137,30 @@ router.put('/:id', adminAuth, async (req, res) => {
       [name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured, req.params.id]
     );
     
+    // Handle image_url if provided
+    if (image_url) {
+      // Check if a primary image already exists
+      const [existingImages] = await pool.query(
+        'SELECT * FROM product_images WHERE product_id = ? AND is_primary = 1',
+        [req.params.id]
+      );
+      
+      if (existingImages.length > 0) {
+        // Update existing primary image
+        await pool.query(
+          'UPDATE product_images SET image_url = ? WHERE product_id = ? AND is_primary = 1',
+          [image_url, req.params.id]
+        );
+      } else {
+        // Insert new primary image
+        await pool.query(
+          'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, 1)',
+          [req.params.id, image_url]
+        );
+      }
+    }
+    
     res.json({ message: 'Product updated' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Delete product (admin only)
-router.delete('/:id', adminAuth, async (req, res) => {
-  try {
-    await pool.query('DELETE FROM products WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Product deleted' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
