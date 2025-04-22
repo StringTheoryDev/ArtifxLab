@@ -20,26 +20,34 @@ router.post('/generate-description', auth, async (req, res) => {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
     
     // Create prompt
+    const prompt = `Generate a professional product description for a music instrument e-commerce site based on the product name: "${productName}".
 
-    const prompt = `Generate a professional, HTML-formatted product description for a music instrument e-commerce site based on the product name: "${productName}". Follow this exact structure:
+Follow this exact structure without adding code backticks or markdown formatting:
 
-1. Start with the product name enclosed in <h2> tags.
+<h2>${productName}</h2>
 
-2. If the product is a guitar, add a paragraph with <p><em>~Guitar pictured is the actual guitar that you will receive~</em></p>.
+${productName.toLowerCase().includes('guitar') ? '<p class="note">~Guitar pictured is the actual guitar that you will receive~</p>' : ''}
 
-3. Include 2-3 concise paragraphs (each in <p> tags) highlighting the product's key features, historical significance, and appeal. Each paragraph should be 4-5 sentences maximum.
+<p>[First paragraph highlighting the product's key features and historical significance. 3-4 sentences maximum.]</p>
 
-4. End with a specifications section: <h4>Specifications:</h4> followed by a <ul> list. Each <li> should contain a specification with the label in <strong> tags (e.g., <li><strong>Model #:</strong> [value]</li>).
+<p>[Second paragraph describing sound characteristics and appeal to musicians. 3-4 sentences maximum.]</p>
 
-Tailor the specifications to the instrument type based on the product name. For example:
+<h3>Product specs</h3>
+<table class="specs-table">
+  <tr>
+    <td class="spec-name">Condition</td>
+    <td class="spec-value">Brand New (New)</td>
+  </tr>
+  <tr>
+    <td class="spec-name">Brand</td>
+    <td class="spec-value">[Extract brand from product name]</td>
+  </tr>
+  [Additional specification rows based on product type]
+</table>
 
-- Guitars: Model #, Series, Orientation, Color, Country Of Origin, Body Material, Neck Material, Fingerboard Material, Pickup Configuration, etc.
+Tailor the specifications to the instrument type. Include all relevant specifications in rows like the example above. For guitars, include: Model, Finish, Categories, Year, Made In, Pickup Configuration, Series, Right/Left Handed, Fretboard Material, Number of Strings, etc.
 
-- Pianos: Model #, Number of Keys, Pedal Types, Finish, Dimensions, Weight, etc.
-
-- Drums: Model #, Drum Sizes, Cymbal Types, Hardware, Finish, etc.
-
-Exclude instance-specific details like serial numbers and pricing. Ensure the text content (excluding HTML tags) is under 360 words.`;
+Do NOT include code formatting, backticks, or markdown. Provide ONLY the HTML that will be directly inserted into the page. Keep the total text content under 350 words.`;
     
     console.log('Sending prompt to Gemini:', prompt);
     
@@ -50,7 +58,10 @@ Exclude instance-specific details like serial numbers and pricing. Ensure the te
       }]
     });
     const response = await result.response;
-    const description = response.text();
+    let description = response.text();
+    
+    // Strip any markdown code blocks if they exist
+    description = description.replace(/```html|```/g, '').trim();
     
     console.log('Generated description:', description.substring(0, 50) + '...');
     

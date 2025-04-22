@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Tab, Nav, Table, Button, Form, Alert, Modal, Badge, Spinner } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import HtmlRenderer from '../components/HtmlRenderer';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -531,6 +532,15 @@ const AdminDashboard = () => {
                   )}
                 </Button>
               </div>
+              
+              {/* Preview of HTML content */}
+              {productForm.description && (
+                <div className="border rounded p-3 mb-3 bg-light">
+                  <h6>Preview:</h6>
+                  <HtmlRenderer htmlContent={productForm.description} />
+                </div>
+              )}
+              
               <Form.Control
                 as="textarea"
                 rows={3}

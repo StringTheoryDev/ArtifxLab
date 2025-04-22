@@ -36,3 +36,34 @@
     transform: rotate(360deg);
   }
 }
+
+/* HTML Content Styles for Product Descriptions */
+.html-content ul {
+  padding-left: 20px;
+  margin-bottom: 1rem;
+}
+
+.html-content p {
+  margin-bottom: 1rem;
+}
+
+.html-content h1, .html-content h2, .html-content h3, 
+.html-content h4, .html-content h5, .html-content h6 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.description-preview {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.html-content ul li {
+  margin-bottom: 0.5rem;
+}
+
+.html-content {
+  text-align: left;
+}

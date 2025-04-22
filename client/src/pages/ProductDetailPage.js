@@ -3,6 +3,7 @@ import { Container, Row, Col, Image, ListGroup, Card, Button, Form } from 'react
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { CartContext } from '../context/CartContext';
+import HtmlRenderer from '../components/HtmlRenderer';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -68,7 +69,7 @@ const ProductDetailPage = () => {
                 <strong>Price:</strong> ${product.price}
               </ListGroup.Item>
               <ListGroup.Item>
-                <p>{product.description}</p>
+                <HtmlRenderer htmlContent={product.description || ''} />
               </ListGroup.Item>
             </ListGroup>
           </Col>
