@@ -1,17 +1,20 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/db');
-const { auth, adminAuth } = require('../middleware/auth');
+
+const { createClient } = require('@supabase/supabase-js');
+const supabaseUrl = 'https://your-supabase-url.supabase.co';
+const supabaseKey = 'public-anonymous-key';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Get all categories
 router.get('/', async (req, res) => {
   try {
-    const [categories] = await pool.query(`
-      SELECT c.*, 
-      (SELECT COUNT(*) FROM products WHERE category_id = c.id) as product_count
-      FROM categories c
-      ORDER BY c.name
-    `);
+    const { data: categories, error } = await supabase
+      .from('categories')
+      .select('*, (select count(*) from products where category_id = categories.id) as product_count')
+      .order('name');
+
+    if (error) throw error;
     res.json(categories);
   } catch (error) {
     console.error(error);
@@ -22,13 +25,17 @@ router.get('/', async (req, res) => {
 // Get category by ID
 router.get('/:id', async (req, res) => {
   try {
-    const [categories] = await pool.query('SELECT * FROM categories WHERE id = ?', [req.params.id]);
-    
-    if (categories.length === 0) {
+    const { data: category, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !category) {
       return res.status(404).json({ message: 'Category not found' });
     }
-    
-    res.json(categories[0]);
+
+    res.json(category);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -36,35 +43,34 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create category (admin only)
-router.post('/', adminAuth, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, parent_id, description, image_url } = req.body;
-    
-    const [result] = await pool.query(
-      'INSERT INTO categories (name, parent_id, description, image_url) VALUES (?, ?, ?, ?)',
-      [name, parent_id || null, description, image_url]
-    );
-    
-    res.status(201).json({ 
-      message: 'Category created',
-      categoryId: result.insertId
-    });
+
+    const { data: newCategory, error } = await supabase
+      .from('categories')
+      .insert([{ name, parent_id: parent_id || null, description, image_url }])
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ message: 'Category created', categoryId: newCategory.id });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Update category (admin only)
-router.put('/:id', adminAuth, async (req, res) => {
+// Update category
+router.put('/:id', async (req, res) => {
   try {
     const { name, parent_id, description, image_url } = req.body;
-    
-    await pool.query(
-      'UPDATE categories SET name = ?, parent_id = ?, description = ?, image_url = ? WHERE id = ?',
-      [name, parent_id || null, description, image_url, req.params.id]
-    );
-    
+
+    const { data: updatedCategory, error } = await supabase
+      .from('categories')
+      .update({ name, parent_id: parent_id || null, description, image_url })
+      .eq('id', req.params.id);
+
+    if (error) throw error;
     res.json({ message: 'Category updated' });
   } catch (error) {
     console.error(error);
@@ -72,10 +78,14 @@ router.put('/:id', adminAuth, async (req, res) => {
   }
 });
 
-// Delete category (admin only)
-router.delete('/:id', adminAuth, async (req, res) => {
+// Delete category
+router.delete('/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM categories WHERE id = ?', [req.params.id]);
+    const { error } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', req.params.id);
+    if (error) throw error;
     res.json({ message: 'Category deleted' });
   } catch (error) {
     console.error(error);

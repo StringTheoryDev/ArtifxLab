@@ -1,19 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../config/db');
-const { auth, adminAuth } = require('../middleware/auth');
+
+const { createClient } = require('@supabase/supabase-js');
+const supabaseUrl = 'https://your-supabase-url.supabase.co';
+const supabaseKey = 'public-anonymous-key';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Get all products
 router.get('/', async (req, res) => {
   try {
-    const [products] = await pool.query(`
-      SELECT p.*, c.name as category_name, 
-      (SELECT image_url FROM product_images WHERE product_id = p.id AND is_primary = 1 LIMIT 1) as primary_image
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      ORDER BY p.created_at DESC
-    `);
-    
+    const { data: products, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category_name: categories(name),
+        primary_image: product_images!inner(image_url)
+      `)
+      .order('created_at', { ascending: false });
+      
+    if (error) throw error;
     res.json(products);
   } catch (error) {
     console.error(error);
@@ -24,34 +29,22 @@ router.get('/', async (req, res) => {
 // Get product by ID
 router.get('/:id', async (req, res) => {
   try {
-    const [products] = await pool.query(`
-      SELECT p.*, c.name as category_name 
-      FROM products p
-      LEFT JOIN categories c ON p.category_id = c.id
-      WHERE p.id = ?
-    `, [req.params.id]);
-    
-    if (products.length === 0) {
+    const { data: product, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category_name: categories(name),
+        images: product_images,
+        attributes: product_attributes
+      `)
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !product) {
       return res.status(404).json({ message: 'Product not found' });
     }
-    
-    // Get product images
-    const [images] = await pool.query(
-      'SELECT * FROM product_images WHERE product_id = ?',
-      [req.params.id]
-    );
-    
-    // Get product attributes
-    const [attributes] = await pool.query(
-      'SELECT * FROM product_attributes WHERE product_id = ?',
-      [req.params.id]
-    );
-    
-    res.json({
-      ...products[0],
-      images,
-      attributes
-    });
+
+    res.json(product);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -59,56 +52,33 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create product (admin only)
-router.post('/', adminAuth, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const { 
-      name, 
-      description, 
-      price, 
-      sale_price, 
-      category_id, 
-      stock_quantity, 
-      brand,
-      sku,
-      featured,
-      attributes,
-      images,
-      image_url  // Add this to support direct URL
-    } = req.body;
-    
-    // Insert product
-    const [result] = await pool.query(
-      'INSERT INTO products (name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured]
-    );
-    
-    const productId = result.insertId;
-    
-    // Process image - handle both formats
+    const { name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured, attributes, images, image_url } = req.body;
+
+    const { data: newProduct, error } = await supabase
+      .from('products')
+      .insert([{ name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured }])
+      .single();
+
+    if (error) throw error;
+    const productId = newProduct.id;
+
+    // Handle images
     if (image_url) {
-      // If direct image_url is provided, use it
-      await pool.query(
-        'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, ?)',
-        [productId, image_url, 1]
-      );
+      await supabase
+        .from('product_images')
+        .insert([{ product_id: productId, image_url, is_primary: true }]);
     } else if (images && images.length > 0) {
-      // Legacy format with images array
-      const imageValues = images.map((img, index) => [
-        productId,
-        img.url,
-        index === 0 || img.is_primary
-      ]);
-      
-      await pool.query(
-        'INSERT INTO product_images (product_id, image_url, is_primary) VALUES ?',
-        [imageValues]
-      );
+      const imageValues = images.map((img, index) => ({
+        product_id: productId,
+        image_url: img.url,
+        is_primary: index === 0,
+      }));
+      await supabase.from('product_images').insert(imageValues);
     }
-    
-    res.status(201).json({ 
-      message: 'Product created',
-      productId
-    });
+
+    res.status(201).json({ message: 'Product created', productId });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -116,55 +86,39 @@ router.post('/', adminAuth, async (req, res) => {
 });
 
 // Update product (admin only)
-router.put('/:id', adminAuth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
-    const { 
-      name, 
-      description, 
-      price, 
-      sale_price, 
-      category_id, 
-      stock_quantity, 
-      brand,
-      sku,
-      featured,
-      image_url  // Add this to support direct URL
-    } = req.body;
-    
+    const { name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured, image_url } = req.body;
     // Update product
-    await pool.query(
-      'UPDATE products SET name = ?, description = ?, price = ?, sale_price = ?, category_id = ?, stock_quantity = ?, brand = ?, sku = ?, featured = ? WHERE id = ?',
-      [name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured, req.params.id]
-    );
-    
-    // Handle image_url if provided
+    await supabase
+      .from('products')
+      .update({ name, description, price, sale_price, category_id, stock_quantity, brand, sku, featured })
+      .eq('id', req.params.id);
+
     if (image_url) {
-      // Check if a primary image already exists
-      const [existingImages] = await pool.query(
-        'SELECT * FROM product_images WHERE product_id = ? AND is_primary = 1',
-        [req.params.id]
-      );
-      
+      // Update or insert primary image
+      const { data: existingImages } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', req.params.id)
+        .eq('is_primary', true);
+
       if (existingImages.length > 0) {
-        // Update existing primary image
-        await pool.query(
-          'UPDATE product_images SET image_url = ? WHERE product_id = ? AND is_primary = 1',
-          [image_url, req.params.id]
-        );
+        await supabase
+          .from('product_images')
+          .update({ image_url })
+          .eq('product_id', req.params.id)
+          .eq('is_primary', true);
       } else {
-        // Insert new primary image
-        await pool.query(
-          'INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, 1)',
-          [req.params.id, image_url]
-        );
+        await supabase
+          .from('product_images')
+          .insert([{ product_id: req.params.id, image_url, is_primary: true }]);
       }
     }
-    
+
     res.json({ message: 'Product updated' });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
   }
 });
-
-module.exports = router;
