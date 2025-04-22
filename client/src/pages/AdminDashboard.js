@@ -283,14 +283,15 @@ const AdminDashboard = () => {
         }
       };
       
-      // Format the form data
+      // Format the form data - pass image_url directly
       const formattedData = {
         ...productForm,
         price: parseFloat(productForm.price),
         sale_price: productForm.sale_price ? parseFloat(productForm.sale_price) : null,
         stock_quantity: parseInt(productForm.stock_quantity),
         category_id: parseInt(productForm.category_id) || null,
-        featured: Boolean(productForm.featured)
+        featured: Boolean(productForm.featured),
+        image_url: productForm.image_url // Ensure this is passed directly
       };
       
       console.log('Submitting data:', formattedData);

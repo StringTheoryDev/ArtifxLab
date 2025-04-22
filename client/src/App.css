@@ -1,18 +1,15 @@
 .App {
   text-align: center;
 }
-
 .App-logo {
   height: 40vmin;
   pointer-events: none;
 }
-
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
   }
 }
-
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -23,11 +20,9 @@
   font-size: calc(10px + 2vmin);
   color: white;
 }
-
 .App-link {
   color: #61dafb;
 }
-
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
@@ -36,34 +31,182 @@
     transform: rotate(360deg);
   }
 }
-
 /* HTML Content Styles for Product Descriptions */
 .html-content ul {
   padding-left: 20px;
   margin-bottom: 1rem;
 }
-
 .html-content p {
   margin-bottom: 1rem;
 }
-
 .html-content h1, .html-content h2, .html-content h3, 
 .html-content h4, .html-content h5, .html-content h6 {
   margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
-
 .description-preview {
   max-height: 300px;
   overflow-y: auto;
   background-color: #f8f9fa;
   border-radius: 4px;
 }
-
 .html-content ul li {
   margin-bottom: 0.5rem;
 }
-
 .html-content {
   text-align: left;
+}
+
+/* Responsive Styles for ArtiFx E-commerce Site */
+
+/* Global responsive styles */
+body {
+  overflow-x: hidden;
+}
+
+.container {
+  padding-left: 15px;
+  padding-right: 15px;
+  width: 100%;
+}
+
+/* Responsive text */
+h1 {
+  font-size: calc(1.5rem + 1vw);
+}
+
+h2 {
+  font-size: calc(1.3rem + 0.6vw);
+}
+
+h3 {
+  font-size: calc(1.1rem + 0.4vw);
+}
+
+/* Product cards */
+.product-card {
+  transition: transform 0.3s, box-shadow 0.3s;
+  margin-bottom: 15px;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+
+.product-image:hover {
+  transform: scale(1.05);
+}
+
+.product-title {
+  height: 2.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* Product detail page */
+.product-detail-image {
+  max-height: 400px;
+  width: 100%;
+  object-fit: contain;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.product-detail-image:hover {
+  transform: scale(1.03);
+}
+
+/* Image modal styling */
+.image-modal {
+  max-width: 90vw !important;
+}
+
+.product-modal-image {
+  max-height: 75vh;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* Responsive table */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* HTML content */
+.html-content {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.html-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.html-content table, .specs-table {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.html-content td, .specs-table td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Admin dashboard */
+.description-preview {
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #f8f9fa;
+}
+
+/* Mobile specific styles */
+@media (max-width: 767.98px) {
+  /* Adjustments for smaller screens */
+  .product-detail-image {
+    max-height: 300px;
+  }
+  
+  .table th, .table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  /* Stack buttons on mobile */
+  .btn-group {
+    flex-direction: column;
+  }
+  
+  .btn-group .btn {
+    margin-bottom: 0.5rem;
+    width: 100%;
+  }
+  
+  /* Adjust modal for mobile */
+  .modal-body {
+    padding: 0.5rem;
+  }
+  
+  /* Better spacing for form elements */
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  /* Product cards on mobile */
+  .col-6 {
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+}
+
+/* Target tablets */
+@media (min-width: 768px) and (max-width: 991.98px) {
+  .container {
+    max-width: 100%;
+  }
 }

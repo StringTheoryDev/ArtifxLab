@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Container, Row, Col, Image, ListGroup, Card, Button, Form } from 'react-bootstrap';
+import { Container, Row, Col, Image, ListGroup, Card, Button, Form, Modal } from 'react-bootstrap';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { CartContext } from '../context/CartContext';
@@ -12,12 +12,22 @@ const ProductDetailPage = () => {
   const [error, setError] = useState(null);
   const [qty, setQty] = useState(1);
   const { addToCart } = useContext(CartContext);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const { data } = await axios.get(`http://localhost:5000/api/products/${id}`);
         setProduct(data);
+        
+        // Set an initial image if available
+        if (data.images && data.images.length > 0) {
+          setSelectedImage(data.images[0].image_url);
+        } else if (data.primary_image) {
+          setSelectedImage(data.primary_image);
+        }
+        
         setLoading(false);
       } catch (error) {
         setError('Failed to load product details');
@@ -30,8 +40,17 @@ const ProductDetailPage = () => {
 
   const addToCartHandler = () => {
     addToCart(product, Number(qty));
-    // Optional: You could add a notification or redirect to cart
   };
+
+  const openImageModal = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setShowImageModal(true);
+  };
+
+  // Determine the image to display
+  const productImage = product?.images && product.images.length > 0 
+    ? product.images[0].image_url 
+    : (product?.primary_image || "https://via.placeholder.com/500x500?text=No+Image");
 
   return (
     <Container>
@@ -47,10 +66,12 @@ const ProductDetailPage = () => {
         <Row>
           <Col md={5}>
             <Image 
-              src={product.images && product.images.length > 0 ? product.images[0].image_url : "https://via.placeholder.com/500x500?text=No+Image"} 
+              src={productImage}
               alt={product.name} 
               fluid 
               className="product-detail-image"
+              style={{ cursor: 'pointer' }}
+              onClick={() => openImageModal(productImage)}
             />
           </Col>
           
@@ -126,6 +147,29 @@ const ProductDetailPage = () => {
           </Col>
         </Row>
       )}
+
+      {/* Image Modal with improved styling */}
+      <Modal 
+        show={showImageModal} 
+        onHide={() => setShowImageModal(false)} 
+        size="lg"
+        centered
+        dialogClassName="image-modal"
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{product?.name}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="text-center p-0">
+          <div className="image-container p-3 d-flex align-items-center justify-content-center" style={{ minHeight: '60vh' }}>
+            <Image 
+              src={selectedImage} 
+              alt={product?.name} 
+              fluid 
+              className="product-modal-image"
+            />
+          </div>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 };
